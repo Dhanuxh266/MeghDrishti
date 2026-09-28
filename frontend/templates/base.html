@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+            MeghDrishti
+        {% endblock %}
+    </title>
+
+
+    <!-- =====================================================
+         GLOBAL STYLESHEET
+         ===================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+    {% block head %}
+    {% endblock %}
+
+</head>
+
+
+<body>
+
+    <div class="app-background">
+
+        {% block content %}
+        {% endblock %}
+
+    </div>
+
+
+    <!-- =====================================================
+         DASHBOARD JAVASCRIPT
+         =====================================================
+
+         app.js contains dashboard-specific logic.
+
+         Do NOT load it on the login page.
+         This prevents dashboard JavaScript from interfering
+         with authentication/login UI.
+         ===================================================== -->
+
+    {% if request.endpoint == 'dashboard' %}
+
+        <script
+            src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            crossorigin=""
+            defer
+        ></script>
+
+        <script
+            src="{{ url_for('static', filename='js/app.js') }}"
+            defer
+        ></script>
+
+    {% endif %}
+
+
+    {% block scripts %}
+    {% endblock %}
+
+</body>
+
+</html>

@@ -1,0 +1,3019 @@
+{% extends "base.html" %}
+
+{% block title %}MeghDrishti | {{ role_title }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+{% endblock %}
+
+{% block content %}
+
+<main class="md-app-shell">
+
+    <!-- =====================================================
+         GLASSMORPHISM NAVBAR
+         ===================================================== -->
+    <header class="md-navbar" id="mdNavbar">
+
+        <a href="#overview" class="md-brand">
+            <span class="md-brand-mark">M</span>
+            <span>
+                <strong>MeghDrishti</strong>
+                <small>Weather Intelligence</small>
+            </span>
+        </a>
+
+        <nav class="md-nav-links" id="mdNavLinks">
+            <button class="md-nav-item active" data-target="overview">Overview</button>
+            <button class="md-nav-item" data-target="alerts">Alerts</button>
+
+            {% if role == "government" %}
+            <button class="md-nav-item" data-target="risk-map">Risk Map</button>
+            <button class="md-nav-item" data-target="ai-prediction">AI Intelligence</button>
+            <button class="md-nav-item" data-target="forecast">Forecast</button>
+            <button class="md-nav-item" data-target="location">Location</button>
+            {% elif role == "panchayat_official" %}
+            <button class="md-nav-item" data-target="weather">Weather</button>
+            <button class="md-nav-item" data-target="ai-prediction">AI Prediction</button>
+            <button class="md-nav-item" data-target="risk-map">Risk & Response</button>
+            <button class="md-nav-item" data-target="forecast">Forecast</button>
+            {% else %}
+            <button class="md-nav-item" data-target="weather">Weather</button>
+            <button class="md-nav-item" data-target="forecast">Forecast</button>
+            <button class="md-nav-item" data-target="risk-map">Safety & Risk</button>
+            {% endif %}
+        </nav>
+
+        <div class="md-nav-right">
+            <span class="md-connection">
+                <span id="connectionDot"></span>
+                <span id="connectionStatus">Connecting</span>
+            </span>
+
+            <a href="{{ url_for('logout') }}" class="md-logout">
+                Logout
+            </a>
+
+            <button class="md-menu-button" id="mdMenuButton" aria-label="Open navigation">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+
+    </header>
+
+    <!-- =====================================================
+         HERO
+         ===================================================== -->
+    <section class="md-hero" id="overview">
+
+        <!--
+            Put your preferred weather image at:
+            frontend/static/images/meghdrishti-hero.jpg
+
+            If the image is not present, the gradient background
+            still keeps the hero visually usable.
+        -->
+
+        <div class="md-hero-image"></div>
+        <div class="md-hero-overlay"></div>
+        <div class="md-hero-glow"></div>
+
+        <div class="md-hero-content">
+
+            <div class="md-hero-kicker">
+                <span class="md-live-dot"></span>
+                WEATHER MONITOR
+            </div>
+
+            <h1>Megh<span>Drishti</span></h1>
+
+            <p class="md-hero-subtitle">
+                AI-powered Panchayat-level weather intelligence
+                & early warning system.
+            </p>
+
+            <div class="md-hero-meta">
+                <span>{{ role_title }}</span>
+                <i></i>
+                <span id="heroScope">{{ scope }}</span>
+            </div>
+
+        </div>
+
+        <div class="md-hero-bottom">
+            <span>LIVE WEATHER INTELLIGENCE</span>
+            <span class="md-hero-scroll">Scroll to explore ↓</span>
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+         UNIFORM DASHBOARD CONTENT FRAME
+         All dashboard section titles and panels share one
+         responsive left/right boundary.
+         ===================================================== -->
+    <div class="md-dashboard-frame">
+
+    <!-- =====================================================
+         GOVERNMENT LOCATION CONTROL
+         ===================================================== -->
+    {% if role == "government" %}
+    <section class="md-location-control" id="locationControl">
+
+        <div class="md-select-title">
+            <span>Government Monitoring</span>
+            <strong>Select monitoring location</strong>
+        </div>
+
+        <div class="md-select-row md-floating-select-row">
+
+            <div class="md-location-field">
+                <label for="stateSelect">State</label>
+                <select id="stateSelect" class="md-glass-select" aria-label="Select State">
+                    <option value="">Select State</option>
+                </select>
+            </div>
+
+            <div class="md-location-field">
+                <label for="districtSelect">District</label>
+                <select id="districtSelect" class="md-glass-select" aria-label="Select District" disabled>
+                    <option value="">Select District</option>
+                </select>
+            </div>
+
+            <div class="md-location-field">
+                <label for="talukaSelect">Taluka</label>
+                <select id="talukaSelect" class="md-glass-select" aria-label="Select Taluka" disabled>
+                    <option value="">Select Taluka</option>
+                </select>
+            </div>
+
+            <div class="md-location-field">
+                <label for="panchayatSelect">Panchayat</label>
+                <select id="panchayatSelect" class="md-glass-select" aria-label="Select Panchayat" disabled>
+                    <option value="">Select Panchayat</option>
+                </select>
+            </div>
+
+        </div>
+
+    </section>
+    {% endif %}
+
+    <!-- =====================================================
+         ROLE-SPECIFIC DASHBOARD HEADER
+         ===================================================== -->
+    <section class="md-role-panel md-role-{{ role }}">
+        {% if role == "government" %}
+        <div>
+            <span class="md-eyebrow">CENTRAL MONITORING</span>
+            <h2>Government Situation Overview</h2>
+            <p>Monitor Panchayat-level weather, localized risk and operational status from one command view.</p>
+        </div>
+        <div class="md-role-kpis">
+            <article><span>Scope</span><strong>All Panchayats</strong></article>
+            <article><span>Risk</span><strong id="roleRiskSummary">Loading</strong></article>
+            <article><span>Map</span><strong>Live</strong></article>
+        </div>
+        {% elif role == "panchayat_official" %}
+        <div>
+            <span class="md-eyebrow">LOCAL RESPONSE DESK</span>
+            <h2>{{ scope }}</h2>
+            <p>Monitor your Panchayat, review localized risk and prepare the local response.</p>
+        </div>
+        <div class="md-role-kpis">
+            <article><span>Assignment</span><strong>Verified Scope</strong></article>
+            <article><span>Risk</span><strong id="roleRiskSummary">Loading</strong></article>
+            <article><span>Response</span><strong>Ready</strong></article>
+        </div>
+        {% else %}
+        <div>
+            <span class="md-eyebrow">LOCAL WEATHER & SAFETY</span>
+            <h2>{{ scope }}</h2>
+            <p>Your registered Panchayat is shown first. Check weather, forecast, risk and safety information.</p>
+        </div>
+        <div class="md-role-kpis">
+            <article><span>Area</span><strong>{{ scope }}</strong></article>
+            <article><span>Weather</span><strong id="roleWeatherSummary">Loading</strong></article>
+            <article><span>Safety</span><strong id="roleRiskSummary">Loading</strong></article>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- =====================================================
+         ROLE-SPECIFIC OPERATIONAL DASHBOARD
+         ===================================================== -->
+    {% if role == "government" %}
+    <section class="md-command-grid" aria-label="Government monitoring summary">
+        <article class="md-command-card"><span>MONITORED PANCHAYATS</span><strong id="govTotalPanchayats">--</strong><small>Current dashboard scope</small></article>
+        <article class="md-command-card risk-green-card"><span>GREEN</span><strong id="govGreenCount">--</strong><small>Low screening risk</small></article>
+        <article class="md-command-card risk-yellow-card"><span>YELLOW</span><strong id="govYellowCount">--</strong><small>Watch conditions</small></article>
+        <article class="md-command-card risk-orange-card"><span>ORANGE</span><strong id="govOrangeCount">--</strong><small>Elevated conditions</small></article>
+        <article class="md-command-card risk-red-card"><span>RED</span><strong id="govRedCount">--</strong><small>Highest screening level</small></article>
+    </section>
+
+    <section class="md-monitor-strip">
+        <div><span class="md-eyebrow">COMMAND VIEW</span><h3>Where is the risk?</h3><p id="govMonitorMessage">Loading Panchayat monitoring status…</p></div>
+        <div class="md-monitor-actions"><button type="button" class="md-refresh" data-target="risk-map">Open Risk Map</button><button type="button" class="md-refresh" data-target="location">Filter Geography</button></div>
+    </section>
+
+    <section class="md-response-prep md-glass-card" aria-label="Government response monitoring preparation">
+        <div class="md-response-prep-head">
+            <div><span class="md-eyebrow">OPERATIONS READINESS</span><h3>Response Monitoring</h3><p>Operational monitoring for alert acknowledgement and response workflow.</p></div>
+            <span class="md-data-tag">OPERATIONAL MONITORING</span>
+        </div>
+        <div class="md-response-kpis">
+            <article><span>Elevated Risk</span><strong id="govElevatedCount">--</strong><small>Orange + Red screening</small></article>
+            <article><span>Selected Area</span><strong id="govSelectedArea">None</strong><small id="govSelectedAreaMeta">Choose a Panchayat</small></article>
+            <article><span>Response Workflow</span><strong>Ready</strong><small>Alert acknowledgement and response are available</small></article>
+        </div>
+        <div class="md-response-table-wrap">
+            <table class="md-response-table">
+                <thead><tr><th>Panchayat</th><th>Risk</th><th>Operational State</th><th>Next Step</th></tr></thead>
+                <tbody id="govResponseRows"><tr><td colspan="4">Loading monitoring status…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+    {% elif role == "panchayat_official" %}
+    <section class="md-local-action-grid">
+        <article class="md-action-card md-glass-card"><span class="md-eyebrow">LOCAL RISK</span><h3 id="officialRiskLevel">Loading</h3><p id="officialRiskReason">Waiting for the latest localized assessment.</p></article>
+        <article class="md-action-card md-glass-card"><span class="md-eyebrow">RECOMMENDED ACTION</span><h3 id="officialActionTitle">Review local conditions</h3><p id="officialActionText">Use the risk explanation and forecast to prepare an appropriate Panchayat response.</p></article>
+        <article class="md-action-card md-glass-card"><span class="md-eyebrow">RESPONSE STATUS</span><h3 id="officialResponseStatus">Ready</h3><p>Use the response controls to acknowledge, document and resolve eligible alerts.</p><span class="md-demo-note">RESPONSE MONITORING</span></article>
+    </section>
+    {% else %}
+    <section class="md-citizen-safety md-glass-card">
+        <div><span class="md-eyebrow">PERSONAL SAFETY VIEW</span><h3 id="citizenSafetyTitle">Local conditions are loading</h3><p id="citizenSafetyText">Your registered Panchayat is the default monitoring area. Check the latest forecast and risk before making weather-sensitive plans.</p></div>
+        <div class="md-safety-items"><span>✓ Check local forecast</span><span>✓ Follow official instructions</span><span>✓ Avoid exposed/low-lying areas during severe weather</span></div>
+    </section>
+    {% endif %}
+
+    <!-- =====================================================
+         ALERT & RESPONSE CENTER
+         ===================================================== -->
+    <section class="md-alert-center md-glass-card" data-section="alerts" id="alertCenter" aria-label="Alert and response center">
+        <div class="md-alert-center-head">
+            <div>
+                <span class="md-eyebrow">ALERT OPERATIONS</span>
+                <h3>Alert & Response Center</h3>
+                <p>Modelled screening alerts, acknowledgement status and notification readiness.</p>
+            </div>
+            <div class="md-alert-head-actions">
+                {% if role in ['government', 'panchayat_official'] %}
+                <button type="button" id="generateAlertButton" class="md-alert-button">Generate Screening Alert</button>
+                {% endif %}
+                <button type="button" id="refreshAlerts" class="md-refresh">↻ Refresh Alerts</button>
+            </div>
+        </div>
+        <div class="md-alert-kpis md-alert-kpis-4">
+            <article><span>ACTIVE ALERTS</span><strong id="alertActiveCount">--</strong><small>Current account scope</small></article>
+            <article><span>SELECTED AREA</span><strong id="alertSelectedArea">--</strong><small id="alertSelectedRisk">Select a Panchayat</small></article>
+            <article><span>NOTIFICATION QUEUE</span><strong id="alertQueueStatus">READY</strong><small>In-app + SMS-ready</small></article>
+            <article><span>DELIVERY HEALTH</span><strong id="alertDeliveryHealth">--</strong><small id="alertDeliveryMeta">Awaiting notification data</small></article>
+        </div>
+        <div id="alertFeedback" class="md-alert-feedback" aria-live="polite" hidden></div>
+        <div id="alertList" class="md-alert-list">
+            <div class="md-alert-empty">Loading active alerts…</div>
+        </div>
+
+        <div class="md-alert-history-head">
+            <div>
+                <span class="md-eyebrow">OPERATIONAL HISTORY</span>
+                <h4>Alert History &amp; Activity Log</h4>
+                <p>Persisted screening alerts and response events for the current account scope.</p>
+            </div>
+            <div class="md-alert-history-controls">
+                <label class="md-alert-filter">
+                    <span>Status</span>
+                    <select id="alertHistoryStatus" aria-label="Alert history status">
+                        <option value="ALL">All</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="ACTIVE">Active</option>
+                    </select>
+                </label>
+                <button type="button" id="refreshAlertHistory" class="md-refresh">Refresh History</button>
+            </div>
+        </div>
+        <div id="alertHistoryList" class="md-alert-history-list">
+            <div class="md-alert-empty">Loading alert history…</div>
+        </div>
+        <div class="md-alert-history-note">Operational history is derived from persisted alert, acknowledgement and resolution records. It does not represent an external government incident log.</div>
+    </section>
+
+    <!-- =====================================================
+         MAIN CONTENT
+         ===================================================== -->
+    <div class="md-content">
+
+        <!-- OVERVIEW -->
+        <section class="md-section active" data-section="overview">
+            <div class="md-selection-status" aria-live="polite">
+                <span>SELECTED PANCHAYAT</span>
+                <strong id="selectedPanchayatStatus">Awaiting location selection</strong>
+            </div>
+
+
+            <div class="md-section-heading">
+                <div>
+                    <span class="md-eyebrow">CURRENT MONITORING SCOPE</span>
+                    <h2 id="overviewPanchayat">
+                        {{ scope }}
+                    </h2>
+                </div>
+
+                <div class="md-status-pill">
+                    <span class="md-status-pulse"></span>
+                    <span id="overviewStatus">LIVE WEATHER</span>
+                </div>
+            </div>
+
+            <div class="md-overview-grid">
+
+                <article class="md-glass-card md-location-card">
+                    <div class="md-card-symbol">⌖</div>
+                    <div>
+                        <span class="md-card-label">PANCHAYAT LOCATION</span>
+                        <h3 id="overviewCoordinates">Loading...</h3>
+                        <p id="mapCoordinates">Coordinates</p>
+                    </div>
+                </article>
+
+                <article class="md-glass-card">
+                    <div class="md-card-symbol">°</div>
+                    <div>
+                        <span class="md-card-label">TEMPERATURE</span>
+                        <h3 id="overviewTemperature">--°C</h3>
+                        <p id="overviewCondition">Loading conditions</p>
+                    </div>
+                </article>
+
+                <article class="md-glass-card">
+                    <div class="md-card-symbol">≈</div>
+                    <div>
+                        <span class="md-card-label">HUMIDITY</span>
+                        <h3 id="overviewHumidity">--%</h3>
+                        <p>Relative humidity</p>
+                    </div>
+                </article>
+
+                <article class="md-glass-card">
+                    <div class="md-card-symbol">↘</div>
+                    <div>
+                        <span class="md-card-label">RAINFALL</span>
+                        <h3 id="overviewRainfall">-- mm</h3>
+                        <p>Current precipitation</p>
+                    </div>
+                </article>
+
+            </div>
+
+            <!-- LIVE INTELLIGENCE SNAPSHOT -->
+            <div class="md-intelligence-grid" aria-label="Live intelligence snapshot">
+                <article class="md-intelligence-card md-glass-card">
+                    <div class="md-intelligence-head"><span class="md-card-label">LOCALIZED RISK</span><span id="overviewRiskBadge" class="md-mini-risk md-risk-none">NO DATA</span></div>
+                    <strong id="overviewRiskValue">--</strong>
+                    <p id="overviewRiskReason">Risk assessment will appear after the latest localized prediction.</p>
+                </article>
+                <article class="md-intelligence-card md-glass-card">
+                    <div class="md-intelligence-head"><span class="md-card-label">AI DOWNSCALING</span><span class="md-data-tag">MODELLED</span></div>
+                    <strong id="overviewAiValue">Ready</strong>
+                    <p id="overviewAiMeta">Run the Panchayat-level model to refresh the localized estimate.</p>
+                </article>
+                <article class="md-intelligence-card md-glass-card">
+                    <div class="md-intelligence-head"><span class="md-card-label">FORECAST WINDOW</span><span class="md-data-tag">NEXT HOURS</span></div>
+                    <strong id="overviewForecastValue">--</strong>
+                    <p id="overviewForecastMeta">Forecast data is loading.</p>
+                </article>
+                <article class="md-intelligence-card md-glass-card">
+                    <div class="md-intelligence-head"><span class="md-card-label">SYSTEM STATUS</span><span class="md-status-mini"><i></i> LIVE</span></div>
+                    <strong id="overviewSystemValue">Monitoring</strong>
+                    <p id="overviewSystemMeta">Weather, AI and risk services are connected through the current MVP pipeline.</p>
+                </article>
+            </div>
+
+        </section>
+
+        <!-- WEATHER -->
+        <section class="md-section" data-section="weather" id="weather">
+
+            <div class="md-section-heading">
+                <div>
+                    <span class="md-eyebrow">LIVE DATA</span>
+                    <h2>Current Weather</h2>
+                </div>
+
+                <button id="refreshWeather" class="md-refresh">
+                    ↻ Refresh
+                </button>
+            </div>
+
+            <article class="md-weather-window md-glass-card">
+
+                <div class="md-weather-top">
+
+                    <div>
+                        <span class="md-card-label">PANCHAYAT</span>
+                        <h2 id="weatherPanchayat">Loading...</h2>
+                        <p id="weatherUpdated">Waiting for live data</p>
+                    </div>
+
+                    <div class="md-current-temp">
+                        <span id="weatherIcon" class="md-weather-icon">☁</span>
+                        <div>
+                            <strong id="weatherTemperature">--°</strong>
+                            <span id="weatherCondition">Loading...</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="md-metric-window">
+
+                    <div>
+                        <span>Feels Like</span>
+                        <strong id="feelsLike">--°C</strong>
+                    </div>
+
+                    <div>
+                        <span>Humidity</span>
+                        <strong id="humidity">--%</strong>
+                    </div>
+
+                    <div>
+                        <span>Rainfall</span>
+                        <strong id="rainfall">-- mm</strong>
+                    </div>
+
+                    <div>
+                        <span>Wind</span>
+                        <strong id="wind">-- km/h</strong>
+                    </div>
+
+                    <div>
+                        <span>Pressure</span>
+                        <strong id="pressure">-- hPa</strong>
+                    </div>
+
+                </div>
+
+                <div class="md-data-source">
+                     <span>DATA SOURCE</span>
+                     <strong id="weatherSource">Open-Meteo</strong>
+                     <small id="weatherDataType">LIVE</small>
+                </div>
+
+            </article>
+
+        </section>
+
+        <!-- FORECAST -->
+<!-- =====================================================
+       AI DOWNSCALED PANCHAYAT PREDICTION
+===================================================== -->
+
+<section
+    class="md-section"
+    data-section="ai-prediction"
+    id="aiPrediction"
+>
+
+    <div class="md-section-heading">
+
+        <div>
+            <span class="md-eyebrow">
+                AI DOWNSCALING
+            </span>
+
+            <h2>
+                Panchayat-Level Prediction
+            </h2>
+        </div>
+
+        <div class="md-ai-status">
+            <span class="md-ai-dot"></span>
+            <span id="aiPredictionStatus">
+                MODEL READY
+            </span>
+        </div>
+
+    </div>
+
+
+    <article class="md-ai-window md-glass-card">
+
+        <div class="md-ai-header">
+
+            <div>
+
+                <span class="md-card-label">
+                    MODELLED WEATHER
+                </span>
+
+                <h2 id="aiPanchayat">
+                    Select Panchayat
+                </h2>
+
+                <p id="aiTargetTime">
+                    Prediction target time
+                </p>
+
+            </div>
+
+
+            <button
+              id="generateAiPrediction"
+              class="md-ai-button"
+              type="button"
+               aria-label="Generate Panchayat-level AI weather prediction"
+            >  
+               <span class="md-ai-button-icon">✦</span>
+
+               <span class="md-ai-button-content">
+                  Generate AI Prediction
+                </span>
+
+                <span class="md-ai-button-arrow">→</span>
+            </button>
+
+        </div>
+
+        <div
+            id="aiPredictionError"
+            class="md-ai-error"
+            hidden
+        >
+            <strong>
+                AI prediction unavailable
+            </strong>
+
+            <span id="aiPredictionErrorMessage">
+                Unable to generate prediction.
+            </span>
+        </div>
+
+
+        <div
+            id="aiPredictionResults"
+            class="md-ai-grid"
+        >
+
+            <div class="md-ai-metric">
+
+                <span>
+                    Temperature
+                </span>
+
+                <strong id="aiTemperature">
+                    -- °C
+                </strong>
+
+                <small>
+                    Modelled
+                </small>
+
+            </div>
+
+
+            <div class="md-ai-metric">
+
+                <span>
+                    Rainfall
+                </span>
+
+                <strong id="aiRainfall">
+                    -- mm
+                </strong>
+
+                <small>
+                    Modelled
+                </small>
+
+            </div>
+
+
+            <div class="md-ai-metric">
+
+                <span>
+                    Humidity
+                </span>
+
+                <strong id="aiHumidity">
+                    -- %
+                </strong>
+
+                <small>
+                    Modelled
+                </small>
+
+            </div>
+
+
+            <div class="md-ai-metric">
+
+                <span>
+                    Wind
+                </span>
+
+                <strong id="aiWind">
+                    -- km/h
+                </strong>
+
+                <small>
+                    Modelled
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <div class="md-ai-footer">
+
+            <div>
+                <span>
+                    MODEL
+                </span>
+
+                <strong id="aiModel">
+                    --
+                </strong>
+            </div>
+
+
+            <div>
+                <span>
+                    VERSION
+                </span>
+
+                <strong id="aiModelVersion">
+                    --
+                </strong>
+            </div>
+
+
+            <div>
+                <span>
+                    DATA TYPE
+                </span>
+
+                <strong id="aiDataType">
+                    MODELLED_PREDICTION
+                </strong>
+            </div>
+
+
+            <div>
+                <span>
+                    SOURCE
+                </span>
+
+                <strong id="aiSource">
+                    MEGHDRISHTI AI
+                </strong>
+            </div>
+
+        </div>
+
+    </article>
+
+</section>
+
+        <!-- =====================================================
+             RISK ASSESSMENT + PANCHAYAT MAP
+             ===================================================== -->
+        <section class="md-section" data-section="risk-map" id="risk-map">
+
+            <div class="md-section-heading">
+                <div>
+                    <span class="md-eyebrow">EARLY WARNING INTELLIGENCE</span>
+                    <h2>Risk Assessment & Panchayat Map</h2>
+                </div>
+
+                <div id="riskLevelPill" class="md-risk-pill md-risk-none">
+                    <span class="md-risk-dot"></span>
+                    <span id="riskLevelText">NO RISK DATA</span>
+                </div>
+            </div>
+
+            <div class="md-risk-layout">
+
+                <article class="md-risk-card md-glass-card">
+                    <div class="md-risk-score-wrap">
+                        <div id="riskScoreRing" class="md-risk-score-ring md-risk-none">
+                            <strong id="riskScore">--</strong>
+                            <span>/100</span>
+                        </div>
+                        <div>
+                            <span class="md-card-label">PANCHAYAT RISK</span>
+                            <h3 id="riskPanchayat">Select Panchayat</h3>
+                            <p id="riskTargetTime">Generate an AI prediction first.</p>
+                        </div>
+                    </div>
+
+                    <div id="riskExplanation" class="md-risk-explanation">
+                        <strong>How this score is formed</strong>
+                        <p>Risk combines modelled weather hazards with local flood susceptibility using a transparent weighted screening index.</p>
+                    </div>
+
+                    <div class="md-risk-components">
+                        <div><span>Rainfall</span><strong id="riskRainfallComponent">--</strong></div>
+                        <div><span>Wind</span><strong id="riskWindComponent">--</strong></div>
+                        <div><span>Humidity</span><strong id="riskHumidityComponent">--</strong></div>
+                        <div><span>Flood susceptibility</span><strong id="riskFloodComponent">--</strong></div>
+                    </div>
+
+                    <small class="md-risk-disclaimer">
+                        Screening indicator only — not an official IMD warning threshold.
+                    </small>
+                </article>
+
+                <article class="md-map-card md-glass-card">
+                    <div class="md-map-header">
+                        <div>
+                            <span class="md-card-label">PANCHAYAT MONITORING MAP</span>
+                            <h3>Spatial Risk View</h3>
+                        </div>
+                        <button id="refreshRiskMap" class="md-refresh" type="button">↻ Refresh Map</button>
+                    </div>
+                    <div id="panchayatRiskMap" class="md-leaflet-map" aria-label="Panchayat risk map"></div>
+                    <div class="md-map-legend">
+                        <span><i class="risk-legend-dot green"></i> Green</span>
+                        <span><i class="risk-legend-dot yellow"></i> Yellow</span>
+                        <span><i class="risk-legend-dot orange"></i> Orange</span>
+                        <span><i class="risk-legend-dot red"></i> Red</span>
+                        <span><i class="risk-legend-dot gray"></i> No prediction</span>
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+        <section class="md-section" data-section="forecast">
+
+            <div class="md-section-heading">
+                <div>
+                    <span class="md-eyebrow">UPCOMING CONDITIONS</span>
+                    <h2>Hourly Forecast</h2>
+                </div>
+            </div>
+
+            <div id="forecastGrid" class="md-forecast-grid">
+                <div class="md-loading-card">
+                    Loading forecast...
+                </div>
+            </div>
+
+        </section>
+
+        <!-- LOCATION -->
+        <section class="md-section" data-section="location">
+
+            <div class="md-section-heading">
+                <div>
+                    <span class="md-eyebrow">GEOGRAPHICAL CONTEXT</span>
+                    <h2>Registered Location</h2>
+                </div>
+            </div>
+
+            <article class="md-location-window md-glass-card">
+
+                <span class="md-card-label">PANCHAYAT</span>
+
+                <h2 id="locationPanchayat">
+                    {{ user.panchayat.name if user.panchayat else scope }}
+                </h2>
+
+                <div class="md-location-grid">
+
+                    <div>
+                        <span>State</span>
+                        <strong>
+                            {{ user.state.name if user.state else "--" }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>District</span>
+                        <strong>
+                            {{ user.district.name if user.district else "--" }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Taluka</span>
+                        <strong>
+                            {{ user.taluka.name if user.taluka else "--" }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Panchayat</span>
+                        <strong id="locationPanchayatDetail">
+                            {{ user.panchayat.name if user.panchayat else "--" }}
+                        </strong>
+                    </div>
+
+                </div>
+
+            </article>
+
+            <div class="md-map-window md-glass-card">
+                <div class="md-map-lines"></div>
+
+                <div class="md-map-center">
+                    <span class="md-map-ring"></span>
+                    <strong id="mapPanchayat">Panchayat</strong>
+                    <small id="locationMapCoordinates">
+                        Loading coordinates...
+                    </small>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ERROR -->
+        <div id="errorWindow" class="md-error" hidden>
+            <strong>Weather service error</strong>
+            <span id="errorMessage">
+                Unable to load weather data.
+            </span>
+        </div>
+
+    </div>
+
+</main>
+
+<style>
+
+/* =========================================================
+   MEGHDRISHTI — CINEMATIC GLASSMORPHISM UI
+   ========================================================= */
+
+.md-app-shell {
+    --bg: #211613;
+    --brown: #4a2c22;
+    --brown-light: #735045;
+    --cream: #f5ede2;
+    --cream-soft: rgba(245,237,226,.76);
+    --glass: rgba(255,247,238,.13);
+    --glass-strong: rgba(255,247,238,.22);
+    --line: rgba(255,255,255,.18);
+    --muted: rgba(245,237,226,.63);
+    --green: #91a96b;
+    min-height: 100vh;
+    color: var(--cream);
+    background:
+        radial-gradient(circle at 10% 0%, #68453a 0%, transparent 32%),
+        radial-gradient(circle at 90% 20%, #422a25 0%, transparent 38%),
+        linear-gradient(145deg, #241715, #3a211c 55%, #201513);
+    overflow-x: hidden;
+    padding-bottom: 70px;
+}
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+.md-navbar {
+    position: fixed;
+    z-index: 1000;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: min(1180px, calc(100% - 30px));
+    min-height: 66px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 18px;
+    padding: 9px 11px 9px 18px;
+    box-sizing: border-box;
+
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.20),
+            rgba(255,255,255,.07)
+        );
+
+    border: 1px solid rgba(255,255,255,.23);
+    border-radius: 22px;
+
+    backdrop-filter: blur(24px) saturate(135%);
+    -webkit-backdrop-filter: blur(24px) saturate(135%);
+
+    box-shadow:
+        0 18px 55px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.25);
+
+    transition:
+        background .25s ease,
+        box-shadow .25s ease,
+        transform .25s ease;
+}
+
+.md-navbar.scrolled {
+    background: rgba(38,24,20,.82);
+    box-shadow:
+        0 20px 65px rgba(0,0,0,.40),
+        inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.md-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--cream);
+    text-decoration: none;
+    min-width: 190px;
+}
+
+.md-brand-mark {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    font-weight: 900;
+    font-size: 1.1rem;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.20);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+.md-brand strong,
+.md-brand small {
+    display: block;
+}
+
+.md-brand strong {
+    font-size: .98rem;
+}
+
+.md-brand small {
+    margin-top: 2px;
+    font-size: .61rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.md-nav-links {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border-radius: 999px;
+    background: rgba(0,0,0,.16);
+    border: 1px solid rgba(255,255,255,.10);
+    isolation: isolate;
+}
+
+.md-nav-item {
+    position: relative;
+    z-index: 2;
+
+    border: 0;
+    background: transparent;
+
+    color: var(--muted);
+
+    padding: 11px 20px;
+
+    border-radius: 999px;
+
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        color 500ms var(--motion-smooth),
+        transform 500ms var(--motion-smooth);
+}
+
+
+.md-nav-item:hover {
+    color: var(--cream);
+
+    transform:
+        translateY(-1px);
+}
+
+
+.md-nav-item.active {
+    color: #2d1c17;
+
+    background: transparent;
+
+    box-shadow: none;
+}
+
+/* =========================================================
+   SLIDING ACTIVE NAV INDICATOR
+   ========================================================= */
+
+.md-nav-links::before {
+    content: "";
+
+    position: absolute;
+
+    z-index: 1;
+
+    top: 0;
+    left: 0;
+
+    width: var(--nav-pill-width, 0px);
+    height: 100%;
+
+    border-radius: 999px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,250,244,.96),
+            rgba(245,237,226,.88)
+        );
+
+    box-shadow:
+        0 6px 22px rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.55);
+
+    transform:
+        translateX(var(--nav-pill-x, 0px));
+
+    transition:
+        transform 650ms var(--motion-soft),
+        width 650ms var(--motion-soft);
+
+    pointer-events: none;
+}
+
+
+/* Slightly slower / softer movement on touch devices */
+
+@media (hover: none) {
+
+    .md-nav-links::before {
+        transition:
+            transform 700ms var(--motion-soft),
+            width 700ms var(--motion-soft);
+    }
+
+}
+
+.md-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.md-connection {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: .65rem;
+}
+
+#connectionDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 4px rgba(145,169,107,.13);
+}
+
+.md-logout {
+    padding: 10px 16px;
+    border-radius: 999px;
+    color: var(--cream);
+    text-decoration: none;
+    font-size: .72rem;
+    font-weight: 800;
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.15);
+    transition: .2s ease;
+}
+
+.md-logout:hover {
+    background: rgba(255,255,255,.19);
+    transform: translateY(-1px);
+}
+
+.md-menu-button {
+    display: none;
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 13px;
+    background: rgba(255,255,255,.12);
+    cursor: pointer;
+}
+
+.md-menu-button span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    margin: 4px auto;
+    background: var(--cream);
+    border-radius: 5px;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.md-hero {
+    position: relative;
+    min-height: 500px;
+    margin: 0 22px;
+    border-radius: 0 0 34px 34px;
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            ellipse at 75% 35%,
+            rgba(122,87,74,.58),
+            transparent 45%
+        ),
+        linear-gradient(125deg, #5d4036, #271917 70%);
+}
+
+.md-hero-image {
+    position: absolute;
+    inset: 0;
+
+    background-image:
+        url("/static/assets/meghdrishti-weather-hero.PNG");
+
+    background-size: cover;
+    background-position: center;
+    filter: saturate(.78) contrast(.92);
+    transform: scale(1.03);
+}
+
+.md-hero-overlay {
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(35,21,18,.90) 0%,
+            rgba(35,21,18,.58) 40%,
+            rgba(35,21,18,.16) 72%,
+            rgba(35,21,18,.56) 100%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(20,12,10,.18),
+            rgba(20,12,10,.78)
+        );
+}
+
+/*
+ * This is the important blend effect:
+ * the image does not end as a hard rectangular block.
+ * It fades into the page background at the bottom and sides.
+ */
+.md-hero::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    left: -5%;
+    right: -5%;
+    bottom: -2px;
+    height: 145px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            transparent 0%,
+            rgba(33,22,19,.45) 35%,
+            #211613 100%
+        );
+
+    pointer-events: none;
+}
+
+.md-hero-glow {
+    position: absolute;
+    z-index: 1;
+    width: 500px;
+    height: 500px;
+    right: -180px;
+    top: -170px;
+    border-radius: 50%;
+    background: rgba(210,177,145,.12);
+    filter: blur(80px);
+}
+
+.md-hero-content {
+    position: relative;
+    z-index: 4;
+    max-width: 1180px;
+    margin: auto;
+    padding: 150px 5vw 70px;
+}
+
+.md-hero-kicker {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: rgba(245,237,226,.68);
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .20em;
+    text-transform: uppercase;
+}
+
+.md-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 5px rgba(145,169,107,.12);
+}
+
+.md-hero h1 {
+    margin: 12px 0 16px;
+    font-size: clamp(3.5rem, 6vw, 5.8rem);
+    line-height: 0.92;
+    letter-spacing: -0.055em;
+    font-weight: 800;
+    color: #fff8ef;
+    text-shadow: 0 12px 30px rgba(0,0,0,.30);
+}
+
+.md-hero h1 span {
+    font-weight: 400;
+}
+
+.md-hero-subtitle {
+    max-width: 620px;
+    margin: 0;
+    color: rgba(255,248,239,.78);
+    font-size: clamp(.95rem, 1.35vw, 1.08rem);
+    line-height: 1.65;
+    letter-spacing: .01em;
+}
+
+.md-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-top: 28px;
+    color: rgba(255,248,239,.58);
+    font-size: .65rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.md-hero-meta i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.45);
+}
+
+.md-hero-bottom {
+    position: absolute;
+    z-index: 5;
+    bottom: 25px;
+    left: 5vw;
+    right: 5vw;
+    display: flex;
+    justify-content: space-between;
+    color: rgba(255,248,239,.46);
+    font-size: .59rem;
+    letter-spacing: .14em;
+}
+
+/* =========================================================
+   GOVERNMENT SELECTOR
+   ========================================================= */
+
+.md-location-control {
+    
+    position: relative;
+    z-index: 10;
+    width: min(1120px, calc(100% - 45px));
+    margin: 25px auto 25px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+
+    background: rgba(255,248,239,.13);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 25px;
+
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    box-shadow:
+        0 20px 55px rgba(0,0,0,.24),
+        inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+/* =========================================================
+   INTERACTIVE GOVERNMENT SELECTOR HOVER EFFECTS
+   ========================================================= */
+
+.md-location-control {
+    transition:
+        transform .30s ease,
+        box-shadow .30s ease,
+        border-color .30s ease,
+        background .30s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .md-location-control:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255,255,255,.30);
+        background: rgba(255,248,239,.15);
+
+        box-shadow:
+            0 25px 65px rgba(0,0,0,.30),
+            inset 0 1px 0 rgba(255,255,255,.25);
+    }
+}
+
+/* Individual location dropdowns */
+.md-glass-select {
+    transition:
+        background .25s ease,
+        border-color .25s ease,
+        transform .20s ease,
+        box-shadow .25s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .md-glass-select:hover:not(:disabled) {
+        background: rgba(255,255,255,.10);
+        border-color: rgba(255,255,255,.32);
+        transform: translateY(-2px);
+
+        box-shadow:
+            0 8px 20px rgba(0,0,0,.16),
+            inset 0 1px 0 rgba(255,255,255,.15);
+    }
+}
+
+/* Active / keyboard-focused dropdown */
+.md-glass-select:focus {
+    background: rgba(255,255,255,.13);
+    border-color: rgba(145,169,107,.65);
+
+    box-shadow:
+        0 0 0 3px rgba(145,169,107,.12),
+        0 8px 24px rgba(0,0,0,.18);
+
+    outline: none;
+}
+
+/* Keep disabled dropdowns visually calm */
+.md-glass-select:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+/* Government Monitoring heading interaction */
+.md-select-title span {
+    transition:
+        color .25s ease,
+        letter-spacing .25s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .md-location-control:hover .md-select-title span {
+        color: #a8bd85;
+        letter-spacing: .16em;
+    }
+}
+
+.md-select-title {
+    min-width: 210px;
+}
+
+.md-select-title span,
+.md-select-title strong {
+    display: block;
+}
+
+.md-select-title span {
+    color: var(--green);
+    font-size: .58rem;
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    font-weight: 800;
+}
+
+.md-select-title strong {
+    margin-top: 5px;
+    color: var(--cream);
+    font-size: .86rem;
+}
+
+.md-select-row {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.md-glass-select {
+    min-width: 0;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 14px;
+    padding: 12px 13px;
+    outline: none;
+    background: rgba(20,13,11,.30);
+    color: var(--cream);
+    font: inherit;
+    font-size: .72rem;
+}
+
+.md-glass-select option {
+    background: #3b241e;
+    color: var(--cream);
+}
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.md-content {
+    width: min(1120px, calc(100% - 45px));
+    margin: auto;
+}
+
+.md-section {
+    display: none;
+    scroll-margin-top: 110px;
+}
+
+.md-section.active {
+    display: block;
+
+    animation:
+        mdSectionIn 900ms var(--motion-soft)
+        both;
+}
+
+@keyframes mdSectionIn {
+
+    0% {
+        opacity: 0;
+        transform:
+            translate3d(0, 14px, 0);
+    }
+
+    45% {
+        opacity: .55;
+    }
+
+    100% {
+        opacity: 1;
+        transform:
+            translate3d(0, 0, 0);
+    }
+}
+
+.md-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 20px;
+    margin: 30px 3px 16px;
+}
+
+.md-eyebrow,
+.md-card-label {
+    color: rgba(245,237,226,.48);
+    font-size: .58rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+.md-section-heading h2 {
+    margin: 5px 0 0;
+    color: var(--cream);
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    letter-spacing: -.035em;
+}
+
+.md-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(145,169,107,.12);
+    border: 1px solid rgba(145,169,107,.17);
+    color: #a8bd85;
+    font-size: .63rem;
+    font-weight: 800;
+}
+
+.md-status-pulse {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: mdPulse 1.8s infinite;
+}
+
+@keyframes mdPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(145,169,107,.30); }
+    50% { box-shadow: 0 0 0 6px rgba(145,169,107,0); }
+}
+
+/* =========================================================
+   GLASS CARDS
+   ========================================================= */
+
+.md-glass-card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,247,238,.15),
+            rgba(255,247,238,.055)
+        );
+
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow:
+        0 18px 50px rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.14);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.md-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.md-glass-card {
+    border-radius: 25px;
+}
+
+.md-overview-grid .md-glass-card {
+    min-height: 145px;
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.md-card-symbol {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+    background: rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.10);
+    color: rgba(255,248,239,.85);
+    font-size: 1.25rem;
+}
+
+.md-glass-card h3 {
+    margin: 7px 0 4px;
+    color: var(--cream);
+    font-size: 1.18rem;
+}
+
+.md-glass-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .74rem;
+}
+
+/* =========================================================
+   WEATHER
+   ========================================================= */
+
+.md-weather-window {
+    padding: 30px;
+}
+
+.md-weather-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 25px;
+}
+
+.md-weather-top h2 {
+    margin: 8px 0 3px;
+    font-size: 2rem;
+}
+
+.md-weather-top p {
+    color: var(--muted);
+}
+
+.md-current-temp {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.md-weather-icon {
+    font-size: 3rem;
+}
+
+.md-current-temp strong {
+    display: block;
+    font-size: clamp(3rem, 6vw, 5rem);
+    line-height: .85;
+    letter-spacing: -.07em;
+}
+
+.md-current-temp span:last-child {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.md-metric-window {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    margin-top: 28px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: rgba(0,0,0,.13);
+    border: 1px solid rgba(255,255,255,.09);
+}
+
+.md-metric-window div {
+    padding: 18px;
+    border-right: 1px solid rgba(255,255,255,.08);
+}
+
+.md-metric-window div:last-child {
+    border-right: 0;
+}
+
+.md-metric-window span,
+.md-metric-window strong {
+    display: block;
+}
+
+.md-metric-window span {
+    color: var(--muted);
+    font-size: .66rem;
+    margin-bottom: 7px;
+}
+
+.md-metric-window strong {
+    color: var(--cream);
+    font-size: .92rem;
+}
+
+.md-source {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: .68rem;
+}
+
+.md-live-badge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #b5ca91;
+    background: rgba(145,169,107,.13);
+}
+
+/* =========================================================
+   BUTTON
+   ========================================================= */
+
+.md-refresh {
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 999px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,.08);
+    color: var(--cream);
+    font: inherit;
+    font-size: .7rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.md-refresh:hover {
+    background: rgba(255,255,255,.15);
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   FORECAST
+   ========================================================= */
+
+.md-forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.md-forecast-card,
+.md-loading-card {
+    min-height: 150px;
+    padding: 19px;
+    border-radius: 22px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,247,238,.14),
+            rgba(255,247,238,.045)
+        );
+
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow:
+        0 15px 38px rgba(0,0,0,.15),
+        inset 0 1px 0 rgba(255,255,255,.12);
+
+    backdrop-filter: blur(17px);
+    -webkit-backdrop-filter: blur(17px);
+}
+
+.md-forecast-time {
+    color: var(--muted);
+    font-size: .67rem;
+}
+
+.md-forecast-temp {
+    margin: 13px 0 7px;
+    font-size: 1.75rem;
+    font-weight: 800;
+}
+
+.md-forecast-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 5px;
+    margin-top: 15px;
+    color: var(--muted);
+    font-size: .62rem;
+}
+
+/* =========================================================
+   LOCATION
+   ========================================================= */
+
+.md-location-window {
+    padding: 30px;
+}
+
+.md-location-window h2 {
+    margin: 8px 0 25px;
+}
+
+.md-location-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.md-location-grid div {
+    padding: 16px;
+    border-radius: 17px;
+    background: rgba(0,0,0,.12);
+    border: 1px solid rgba(255,255,255,.07);
+}
+
+.md-location-grid span,
+.md-location-grid strong {
+    display: block;
+}
+
+.md-location-grid span {
+    color: var(--muted);
+    font-size: .62rem;
+    margin-bottom: 6px;
+}
+
+.md-location-grid strong {
+    color: var(--cream);
+    font-size: .78rem;
+}
+
+.md-map-window {
+    position: relative;
+    min-height: 290px;
+    margin-top: 13px;
+    overflow: hidden;
+}
+
+.md-map-lines {
+    position: absolute;
+    inset: 0;
+    opacity: .24;
+    background-image:
+        linear-gradient(
+            rgba(255,255,255,.12) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,.12) 1px,
+            transparent 1px
+        );
+    background-size: 42px 42px;
+    transform: perspective(500px) rotateX(25deg) scale(1.3);
+}
+
+.md-map-center {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+}
+
+.md-map-ring {
+    width: 55px;
+    height: 55px;
+    margin: auto;
+    display: block;
+    border-radius: 50%;
+    border: 1px solid rgba(169,191,132,.7);
+    box-shadow:
+        0 0 0 12px rgba(145,169,107,.08),
+        0 0 45px rgba(145,169,107,.16);
+}
+
+.md-map-center strong {
+    margin-top: 17px;
+    font-size: 1rem;
+}
+
+.md-map-center small {
+    margin-top: 5px;
+    color: var(--muted);
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.md-error {
+    margin-top: 15px;
+    padding: 15px 18px;
+    border-radius: 18px;
+    background: rgba(160,60,45,.14);
+    border: 1px solid rgba(160,60,45,.20);
+    color: #e7a69a;
+    font-size: .74rem;
+}
+
+.md-error span {
+    margin-left: 8px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 950px) {
+
+    .md-brand {
+        min-width: auto;
+    }
+
+    .md-connection {
+        display: none;
+    }
+
+    .md-overview-grid,
+    .md-forecast-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .md-location-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .md-location-control {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .md-select-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .md-metric-window {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .md-metric-window div:nth-child(3) {
+        border-right: 0;
+    }
+}
+
+@media (max-width: 700px) {
+
+    .md-navbar {
+        top: 10px;
+        width: calc(100% - 20px);
+    }
+
+    .md-nav-links {
+        position: absolute;
+        top: 75px;
+        left: 0;
+        right: 0;
+        display: none;
+        padding: 7px;
+        border-radius: 20px;
+        background: rgba(38,24,20,.90);
+        border: 1px solid rgba(255,255,255,.15);
+        backdrop-filter: blur(20px);
+    }
+
+    .md-nav-links.open {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .md-nav-item {
+        padding: 13px 10px;
+    }
+
+    .md-menu-button {
+        display: block;
+    }
+
+    .md-logout {
+        display: none;
+    }
+
+    .md-hero {
+        min-height: 530px;
+        margin: 0 8px;
+        border-radius: 0 0 25px 25px;
+    }
+
+    .md-hero-content {
+        padding: 180px 25px 75px;
+    }
+
+    .md-hero-bottom {
+        left: 25px;
+        right: 25px;
+    }
+
+    .md-hero-scroll {
+        display: none;
+    }
+
+    .md-content,
+    .md-location-control {
+        width: calc(100% - 24px);
+    }
+
+    .md-overview-grid,
+    .md-forecast-grid,
+    .md-location-grid,
+    .md-select-row {
+        grid-template-columns: 1fr;
+    }
+
+    .md-weather-top {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .md-metric-window {
+        grid-template-columns: 1fr;
+    }
+
+    .md-metric-window div {
+        border-right: 0;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .md-metric-window div:last-child {
+        border-bottom: 0;
+    }
+
+    .md-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .md-status-pill {
+        align-self: flex-start;
+    }
+}
+/* =========================================================
+   MEGHDRISHTI — AI DOWNSCALED PREDICTION
+   ========================================================= */
+
+.md-ai-window {
+    position: relative;
+    overflow: hidden;
+    padding: 28px;
+}
+
+
+.md-ai-window::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            circle at 85% 10%,
+            rgba(255,255,255,0.08),
+            transparent 35%
+        );
+}
+
+
+.md-ai-header {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 24px;
+}
+
+
+.md-ai-header h2 {
+    margin: 6px 0 4px;
+}
+
+
+.md-ai-header p {
+    margin: 0;
+    opacity: 0.65;
+}
+
+
+.md-ai-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    border-radius: 999px;
+
+    background: rgba(255,255,255,0.06);
+
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+
+.md-ai-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+
+    box-shadow:
+        0 0 12px currentColor;
+}
+
+
+.md-ai-button {
+    border: 0;
+
+    padding: 12px 18px;
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+    font: inherit;
+    font-weight: 600;
+
+    background: rgba(255,255,255,0.12);
+
+    color: inherit;
+
+    backdrop-filter: blur(12px);
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.md-ai-button:hover {
+    transform: translateY(-1px);
+
+    background: rgba(255,255,255,0.18);
+}
+
+
+.md-ai-button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+
+.md-ai-grid {
+    position: relative;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 14px;
+
+    margin-top: 26px;
+}
+
+
+.md-ai-metric {
+    padding: 18px;
+
+    border-radius: 16px;
+
+    background: rgba(255,255,255,0.055);
+
+    border: 1px solid rgba(255,255,255,0.07);
+}
+
+
+.md-ai-metric span {
+    display: block;
+
+    font-size: 11px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.08em;
+
+    opacity: 0.6;
+}
+
+
+.md-ai-metric strong {
+    display: block;
+
+    margin-top: 8px;
+
+    font-size: 28px;
+}
+
+
+.md-ai-metric small {
+    display: block;
+
+    margin-top: 5px;
+
+    opacity: 0.45;
+
+    font-size: 11px;
+}
+
+
+.md-ai-footer {
+    position: relative;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+
+    margin-top: 18px;
+
+    padding-top: 18px;
+
+    border-top:
+        1px solid rgba(255,255,255,0.08);
+}
+
+
+.md-ai-footer span {
+    display: block;
+
+    font-size: 9px;
+
+    letter-spacing: 0.08em;
+
+    opacity: 0.45;
+}
+
+
+.md-ai-footer strong {
+    display: block;
+
+    margin-top: 5px;
+
+    font-size: 12px;
+}
+
+
+.md-ai-loading {
+    margin-top: 20px;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    background: rgba(255,255,255,0.05);
+
+    font-size: 13px;
+}
+
+
+.md-ai-error {
+    margin-top: 20px;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    background: rgba(120, 30, 30, 0.22);
+
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+
+.md-ai-error strong {
+    display: block;
+}
+
+
+.md-ai-error span {
+    display: block;
+
+    margin-top: 4px;
+
+    opacity: 0.7;
+
+    font-size: 13px;
+}
+
+
+@media (max-width: 900px) {
+
+    .md-ai-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .md-ai-footer {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .md-ai-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .md-ai-button {
+        width: 100%;
+    }
+
+    .md-ai-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .md-ai-footer {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* =========================================================
+   MEGHDRISHTI — GLOBAL SMOOTH MOTION SYSTEM
+   ========================================================= */
+
+.md-app-shell {
+    --motion-smooth:
+        cubic-bezier(.22, .61, .36, 1);
+
+    --motion-soft:
+        cubic-bezier(.16, 1, .3, 1);
+
+    --motion-duration:
+        900ms;
+}
+
+
+/* Prevent accidental text selection during UI transitions */
+
+.md-nav-item,
+.md-refresh,
+.md-ai-button,
+.md-glass-select {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* GPU acceleration for frequently animated elements */
+
+.md-navbar,
+.md-nav-links,
+.md-nav-item,
+.md-section,
+.md-glass-card,
+.md-ai-button,
+.md-forecast-card {
+    backface-visibility: hidden;
+}
+
+/* Keep the fixed navbar exactly centered on the viewport.
+   This preserves the required translateX(-50%) centering. */
+.md-navbar {
+    transform: translateX(-50%) translateZ(0);
+}
+
+
+
+/* =========================================================
+   MEGHDRISHTI — SYMMETRICAL NAV TABS / UI HARMONY
+   ========================================================= */
+
+/* Desktop navbar is divided into balanced left / center / right zones. */
+.md-navbar {
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+    align-items: center;
+    justify-content: initial;
+    gap: 18px;
+}
+
+.md-brand {
+    justify-self: start;
+}
+
+.md-nav-links {
+    justify-self: center;
+    min-height: 48px;
+    padding: 3px;
+    gap: 2px;
+    background: rgba(24, 16, 13, .30);
+    border: 1px solid rgba(255,255,255,.13);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 8px 24px rgba(0,0,0,.10);
+}
+
+.md-nav-item {
+    min-width: 92px;
+    height: 42px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    letter-spacing: .01em;
+    color: rgba(243,232,220,.68);
+}
+
+.md-nav-item:hover {
+    color: var(--cream);
+    transform: translateY(0);
+    background: rgba(255,255,255,.045);
+}
+
+.md-nav-item.active {
+    color: #2d1c17;
+}
+
+/* The active tab is inset equally on all sides, giving every tab the same visual weight. */
+.md-nav-links::before {
+    top: 3px;
+    height: 42px;
+    border-radius: 999px;
+    box-shadow:
+        0 5px 18px rgba(0,0,0,.16),
+        inset 0 1px 0 rgba(255,255,255,.62);
+}
+
+.md-nav-right {
+    justify-self: end;
+    min-width: 190px;
+    justify-content: flex-end;
+}
+
+/* A slightly quieter connection chip keeps the right side visually balanced. */
+.md-connection {
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.md-logout {
+    min-width: 76px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+}
+
+/* Keep the navigation centered even when the brand text length changes. */
+@media (min-width: 701px) {
+    .md-navbar.scrolled .md-nav-links {
+        background: rgba(17,11,9,.38);
+    }
+}
+
+@media (max-width: 1100px) and (min-width: 701px) {
+    .md-navbar {
+        grid-template-columns: auto 1fr auto;
+        width: min(1180px, calc(100% - 20px));
+        gap: 10px;
+    }
+
+    .md-brand {
+        min-width: 170px;
+    }
+
+    .md-nav-links {
+        width: max-content;
+        max-width: 100%;
+    }
+
+    .md-nav-item {
+        min-width: 78px;
+        padding: 0 11px;
+        font-size: .72rem;
+    }
+
+    .md-nav-right {
+        min-width: 170px;
+    }
+}
+
+@media (max-width: 700px) {
+    .md-navbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .md-brand {
+        min-width: 0;
+    }
+
+    .md-nav-links {
+        min-height: auto;
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .md-nav-links.open {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .md-nav-item {
+        min-width: 0;
+        width: 100%;
+        height: 44px;
+        padding: 0 9px;
+        border-radius: 14px;
+    }
+
+    .md-nav-links::before {
+        top: 6px;
+        height: 44px;
+    }
+
+    .md-nav-right {
+        min-width: auto;
+    }
+
+    .md-connection {
+        display: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .md-brand strong {
+        font-size: .88rem;
+    }
+
+    .md-brand small {
+        display: none;
+    }
+
+    .md-brand-mark {
+        width: 38px;
+        height: 38px;
+    }
+}
+
+
+/* =========================================================
+   MEGHDRISHTI — UNIFORM RESPONSIVE TITLE BOUNDARY
+   ---------------------------------------------------------
+   One master frame controls the horizontal boundary of all
+   dashboard sections. The hero remains cinematic, while
+   dashboard titles/panels align from start to end.
+   ========================================================= */
+
+.md-dashboard-frame {
+    --md-frame-max: 1120px;
+    --md-frame-gutter: 24px;
+
+    width: min(
+        var(--md-frame-max),
+        calc(100% - (var(--md-frame-gutter) * 2))
+    );
+    margin: 25px auto 0;
+}
+
+/* Every top-level dashboard module uses exactly the same edge. */
+.md-dashboard-frame > .md-location-control,
+.md-dashboard-frame > .md-role-panel,
+.md-dashboard-frame > .md-command-grid,
+.md-dashboard-frame > .md-monitor-strip,
+.md-dashboard-frame > .md-response-prep,
+.md-dashboard-frame > .md-local-action-grid,
+.md-dashboard-frame > .md-citizen-safety,
+.md-dashboard-frame > .md-alert-center,
+.md-dashboard-frame > .md-content {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+/* Section headings must sit exactly on the same left/right
+   boundary as their section content. */
+.md-dashboard-frame .md-section-heading {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+/* Remove the small 3px heading offset from the original CSS. */
+.md-dashboard-frame .md-section-heading {
+    margin-top: 30px;
+    margin-bottom: 16px;
+}
+
+/* Nested content grids inherit the frame rather than creating
+   a second independent horizontal system. */
+.md-dashboard-frame .md-content {
+    width: 100%;
+}
+
+.md-dashboard-frame .md-intelligence-grid,
+.md-dashboard-frame .md-overview-grid,
+.md-dashboard-frame .md-risk-layout,
+.md-dashboard-frame .md-forecast-grid {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* The hero title uses the same master content width. */
+.md-hero-content {
+    width: min(
+        1120px,
+        calc(100% - 48px)
+    );
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Hero bottom labels use the same content boundary. */
+.md-hero-bottom {
+    width: min(
+        1120px,
+        calc(100% - 48px)
+    );
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1000px) {
+    .md-dashboard-frame {
+        --md-frame-gutter: 20px;
+    }
+
+    .md-hero-content,
+    .md-hero-bottom {
+        width: calc(100% - 40px);
+    }
+
+    .md-hero-content {
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 560px) {
+    .md-dashboard-frame {
+        --md-frame-gutter: 16px;
+        margin-top: 20px;
+    }
+
+    .md-hero-content,
+    .md-hero-bottom {
+        width: calc(100% - 32px);
+    }
+
+    .md-dashboard-frame .md-section-heading {
+        margin-left: 0;
+        margin-right: 0;
+    }
+}
+
+
+/* =========================================================
+   FINAL GOVERNMENT LOCATION SELECTOR
+   FLOATING LABEL / REFERENCE-STYLE FIELD
+   ========================================================= */
+
+.md-location-control .md-floating-select-row {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+}
+
+.md-location-control .md-location-field {
+    position: relative !important;
+    display: block;
+    min-width: 0;
+    width: 100%;
+    height: 64px;
+}
+
+.md-location-control .md-location-field > label {
+    position: absolute !important;
+    top: 9px !important;
+    left: 16px !important;
+    right: auto !important;
+
+    z-index: 5 !important;
+
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    color: rgba(245, 237, 226, .66) !important;
+
+    font-size: 11px !important;
+    line-height: 1 !important;
+    font-weight: 600 !important;
+    letter-spacing: .01em !important;
+    text-transform: none !important;
+
+    pointer-events: none !important;
+}
+
+.md-location-control .md-location-field .md-glass-select {
+    position: absolute !important;
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 64px !important;
+    min-height: 64px !important;
+
+    box-sizing: border-box !important;
+
+    padding: 25px 40px 7px 16px !important;
+
+    border: 1px solid rgba(255, 255, 255, .11) !important;
+    border-radius: 15px !important;
+
+    background: rgba(35, 24, 20, .48) !important;
+
+    color: rgba(255, 250, 245, .94) !important;
+
+    font-size: 13px !important;
+    line-height: 1.15 !important;
+
+    outline: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    cursor: pointer;
+
+    transition:
+        background .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease !important;
+}
+
+.md-location-control .md-location-field > label {
+    /* Keep the label above the select's painted background. */
+    pointer-events: none !important;
+}
+
+.md-location-control .md-location-field:focus-within > label {
+    color: rgba(255, 250, 245, .86) !important;
+}
+
+.md-location-control .md-location-field .md-glass-select:hover:not(:disabled) {
+    background: rgba(45, 31, 26, .68) !important;
+    border-color: rgba(255, 255, 255, .18) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.md-location-control .md-location-field .md-glass-select:focus {
+    background: rgba(45, 31, 26, .74) !important;
+    border-color: rgba(255, 255, 255, .28) !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .06) !important;
+}
+
+.md-location-control .md-location-field .md-glass-select:disabled {
+    opacity: .55 !important;
+}
+
+.md-location-control .md-location-field .md-glass-select option {
+    background: #2f201b !important;
+    color: #fffaf5 !important;
+}
+
+@media (max-width: 1000px) {
+    .md-location-control .md-floating-select-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .md-location-control .md-floating-select-row {
+        grid-template-columns: 1fr;
+    }
+
+    .md-location-control .md-location-field,
+    .md-location-control .md-location-field .md-glass-select {
+        height: 61px !important;
+        min-height: 61px !important;
+    }
+
+    .md-location-control .md-location-field .md-glass-select {
+        padding: 24px 40px 7px 15px !important;
+    }
+
+    .md-location-control .md-location-field > label {
+        top: 9px !important;
+        left: 15px !important;
+    }
+}
+
+
+
+/* =========================================================
+   FINAL INTERACTIVE NAVBAR — RESPONSIVE + GLASS MENU
+   ========================================================= */
+
+.md-navbar {
+    position: fixed;
+    isolation: isolate;
+    overflow: visible;
+}
+
+/* JS adds this class when the desktop navigation no longer
+   has enough room for the complete navbar. */
+.md-navbar.nav-collapsed .md-nav-links {
+    display: none !important;
+}
+
+.md-navbar.nav-collapsed .md-connection {
+    display: none !important;
+}
+
+.md-navbar.nav-collapsed .md-nav-right {
+    min-width: auto !important;
+    justify-self: end;
+}
+
+.md-navbar.nav-collapsed .md-menu-button {
+    display: flex !important;
+}
+
+/* Two-line menu icon. The third legacy span is hidden. */
+.md-menu-button {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 13px;
+    background: rgba(255,255,255,.10);
+    box-sizing: border-box;
+    transition: background .22s ease, border-color .22s ease, transform .22s ease;
+}
+
+.md-menu-button:hover {
+    background: rgba(255,255,255,.16);
+    border-color: rgba(255,255,255,.24);
+}
+
+.md-menu-button span {
+    position: absolute;
+    width: 18px;
+    height: 2px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--cream);
+    transform-origin: center;
+    transition: transform .25s ease, opacity .2s ease;
+}
+
+.md-menu-button span:nth-child(1) {
+    transform: translateY(-3px);
+}
+
+.md-menu-button span:nth-child(2) {
+    transform: translateY(3px);
+}
+
+.md-menu-button span:nth-child(3) {
+    display: none !important;
+}
+
+.md-menu-button.is-open span:nth-child(1) {
+    transform: rotate(45deg);
+}
+
+.md-menu-button.is-open span:nth-child(2) {
+    transform: rotate(-45deg);
+}
+
+/* Desktop active pill remains a smooth sliding white pill. */
+@media (min-width: 701px) {
+    .md-navbar:not(.nav-collapsed) .md-nav-links {
+        display: flex;
+    }
+
+    .md-navbar:not(.nav-collapsed) .md-menu-button {
+        display: none;
+    }
+}
+
+/* Collapsed / mobile dropdown */
+@media (max-width: 1100px) {
+    .md-navbar.nav-collapsed,
+    .md-navbar {
+        overflow: visible;
+    }
+
+    .md-navbar.nav-collapsed .md-nav-links,
+    .md-nav-links.open {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        left: auto;
+        width: min(320px, calc(100vw - 30px));
+        min-height: auto;
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 5px;
+        padding: 9px;
+        border-radius: 19px;
+        background: linear-gradient(145deg, rgba(42,27,22,.98), rgba(25,17,14,.97));
+        border: 1px solid rgba(255,255,255,.18);
+        box-shadow: 0 24px 65px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.10);
+        backdrop-filter: blur(24px) saturate(145%);
+        -webkit-backdrop-filter: blur(24px) saturate(145%);
+        z-index: 3000;
+        animation: md-navbar-menu-in .2s ease both;
+    }
+
+    /* When collapsed but not open, keep the dropdown hidden. */
+    .md-navbar.nav-collapsed .md-nav-links:not(.open) {
+        display: none !important;
+    }
+
+    .md-nav-links.open::before {
+        display: none !important;
+    }
+
+    .md-nav-links.open .md-nav-item {
+        width: 100%;
+        min-width: 0;
+        height: 44px;
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        border-radius: 12px;
+        color: rgba(255,250,245,.86);
+        background: transparent;
+        border: 1px solid transparent;
+        transform: none;
+    }
+
+    .md-nav-links.open .md-nav-item:hover {
+        color: #2d1c17;
+        background: rgba(255,250,245,.84);
+        border-color: rgba(255,255,255,.45);
+        transform: translateX(2px);
+    }
+
+    .md-nav-links.open .md-nav-item.active {
+        color: #2d1c17;
+        background: #fffaf5;
+        border-color: rgba(255,255,255,.90);
+        box-shadow: 0 5px 18px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,1);
+    }
+}
+
+@media (max-width: 700px) {
+    .md-navbar {
+        display: flex !important;
+        width: calc(100% - 20px);
+        gap: 10px;
+        overflow: visible;
+    }
+
+    .md-navbar .md-connection {
+        display: none !important;
+    }
+
+    .md-navbar .md-nav-links:not(.open) {
+        display: none !important;
+    }
+
+    .md-navbar .md-nav-links.open {
+        top: calc(100% + 10px);
+        left: 0;
+        right: 0;
+        width: 100%;
+        grid-template-columns: 1fr;
+    }
+
+    .md-navbar .md-menu-button {
+        display: flex !important;
+    }
+}
+
+@keyframes md-navbar-menu-in {
+    from { opacity: 0; transform: translateY(-6px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .md-menu-button,
+    .md-menu-button span,
+    .md-nav-links,
+    .md-nav-links::before,
+    .md-nav-item {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+</style>
+
+{% endblock %}

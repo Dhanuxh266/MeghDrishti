@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeghDrishti | Create Account</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-background">
+        <main class="register-page">
+            <section class="brand-panel">
+                <div class="eyebrow">WEATHER MONITOR</div>
+                <h1>Megh<span>Drishti</span></h1>
+                <p class="tagline">Every Taluka Tells a Story</p>
+                <div class="divider"></div>
+                <p class="description">Create a citizen account to receive Panchayat-level weather intelligence, risk information and safety alerts.</p>
+                <div class="system-note"><span class="status-dot"></span><span>CITIZEN REGISTRATION • SECURE</span></div>
+            </section>
+
+            <section class="register-panel">
+                <div class="register-card">
+                    <div class="register-header">
+                        <span class="mini-label">CREATE ACCOUNT</span>
+                        <h2>Join MeghDrishti</h2>
+                        <p>Register as a citizen and select your Panchayat.</p>
+                    </div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="flash {{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('register') }}" class="register-form" id="registerForm">
+                        <label for="regName">Full name *</label>
+                        <input id="regName" name="name" type="text" maxlength="120" autocomplete="name" required>
+
+                        <label for="regMobile">Mobile number *</label>
+                        <input id="regMobile" name="mobile" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel" required>
+
+                        <label for="regEmail">Email</label>
+                        <input id="regEmail" name="email" type="email" maxlength="160" autocomplete="email" placeholder="Optional">
+
+                        <label for="regPassword">Password *</label>
+                        <input id="regPassword" name="password" type="password" minlength="8" autocomplete="new-password" required>
+
+                        <label for="regConfirmPassword">Confirm password *</label>
+                        <input id="regConfirmPassword" name="confirm_password" type="password" minlength="8" autocomplete="new-password" required>
+
+                        <label for="stateSelect">State *</label>
+                        <select id="stateSelect" required>
+                            <option value="">Select State</option>
+                        </select>
+
+                        <label for="districtSelect">District *</label>
+                        <select id="districtSelect" disabled required>
+                            <option value="">Select District</option>
+                        </select>
+
+                        <label for="talukaSelect">Taluka *</label>
+                        <select id="talukaSelect" disabled required>
+                            <option value="">Select Taluka</option>
+                        </select>
+
+                        <label for="panchayat_id">Panchayat *</label>
+                        <select id="panchayat_id" name="panchayat_id" disabled required>
+                            <option value="">Select Panchayat</option>
+                        </select>
+
+                        <div class="register-actions">
+                            <button type="submit" class="primary-button"><span>CREATE ACCOUNT</span><span>→</span></button>
+                            <span class="register-note">Citizen accounts cannot create Government or Panchayat Official privileges. Those roles remain controlled by the application.</span>
+                        </div>
+                    </form>
+
+                    <div class="register-login">Already have an account? <a href="{{ url_for('index') }}">LOGIN</a></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+(() => {
+    const $ = id => document.getElementById(id);
+    const state = $("stateSelect");
+    const district = $("districtSelect");
+    const taluka = $("talukaSelect");
+    const panchayat = $("panchayat_id");
+
+    const fill = (select, items, placeholder) => {
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        items.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.name;
+            select.appendChild(option);
+        });
+        select.disabled = items.length === 0;
+    };
+
+    const load = async (url, select, placeholder) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Location request failed: " + response.status);
+        fill(select, await response.json(), placeholder);
+    };
+
+    state.addEventListener("change", async () => {
+        district.disabled = true; taluka.disabled = true; panchayat.disabled = true;
+        fill(district, [], "Select District");
+        fill(taluka, [], "Select Taluka");
+        fill(panchayat, [], "Select Panchayat");
+        if (!state.value) return;
+        try { await load(`/api/public/locations/districts/${state.value}`, district, "Select District"); }
+        catch (e) { console.error(e); }
+    });
+
+    district.addEventListener("change", async () => {
+        taluka.disabled = true; panchayat.disabled = true;
+        fill(taluka, [], "Select Taluka");
+        fill(panchayat, [], "Select Panchayat");
+        if (!district.value) return;
+        try { await load(`/api/public/locations/talukas/${district.value}`, taluka, "Select Taluka"); }
+        catch (e) { console.error(e); }
+    });
+
+    taluka.addEventListener("change", async () => {
+        panchayat.disabled = true;
+        fill(panchayat, [], "Select Panchayat");
+        if (!taluka.value) return;
+        try { await load(`/api/public/locations/panchayats/${taluka.value}`, panchayat, "Select Panchayat"); }
+        catch (e) { console.error(e); }
+    });
+
+    fetch("/api/public/locations/states")
+        .then(r => r.ok ? r.json() : Promise.reject(new Error("State request failed: " + r.status)))
+        .then(items => fill(state, items, "Select State"))
+        .catch(console.error);
+})();
+</script>
+</body>
+</html>

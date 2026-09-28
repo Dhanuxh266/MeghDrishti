@@ -1,0 +1,91 @@
+{
+  "selected_model": "random_forest",
+  "model_version": "meghdrishti-rf-2026-demo",
+  "dataset": "SIMULATED_DEMO_TRAINING",
+  "split": "chronological 80% dates / 20% dates",
+  "train_date_range": "2026-05-19 -> 2026-08-20",
+  "validation_date_range": "2026-08-21 -> 2026-09-13",
+  "targets": [
+    "target_temperature_c",
+    "target_rainfall_mm",
+    "target_humidity_percent",
+    "target_wind_speed_kmh"
+  ],
+  "metrics": {
+    "linear_regression": {
+      "targets": {
+        "target_temperature_c": {
+          "MAE": 0.6766618781903834,
+          "RMSE": 0.7569961852076238,
+          "R2": 0.3472692270501436
+        },
+        "target_rainfall_mm": {
+          "MAE": 0.5712649963901025,
+          "RMSE": 0.7169653949978442,
+          "R2": 0.32951385527250243
+        },
+        "target_humidity_percent": {
+          "MAE": 0.0,
+          "RMSE": 0.0,
+          "R2": 1.0
+        },
+        "target_wind_speed_kmh": {
+          "MAE": 1.9401096559197093,
+          "RMSE": 2.1149185554363616,
+          "R2": -0.10441493731580986
+        }
+      },
+      "average_mae": 0.7970091326250488
+    },
+    "random_forest": {
+      "targets": {
+        "target_temperature_c": {
+          "MAE": 8.171241461241152e-14,
+          "RMSE": 9.236486202193001e-14,
+          "R2": 1.0
+        },
+        "target_rainfall_mm": {
+          "MAE": 0.0034141666666654175,
+          "RMSE": 0.0047674258073314105,
+          "R2": 0.9999703543276152
+        },
+        "target_humidity_percent": {
+          "MAE": 0.0,
+          "RMSE": 0.0,
+          "R2": 1.0
+        },
+        "target_wind_speed_kmh": {
+          "MAE": 3.952393967665557e-14,
+          "RMSE": 4.6159650182837746e-14,
+          "R2": 1.0
+        }
+      },
+      "average_mae": 0.0008535416666966635
+    },
+    "xgboost": {
+      "targets": {
+        "target_temperature_c": {
+          "MAE": 0.00011049906412807786,
+          "RMSE": 0.00013352207888424287,
+          "R2": 0.9999999796926676
+        },
+        "target_rainfall_mm": {
+          "MAE": 0.0011646800635692865,
+          "RMSE": 0.0012750667081188362,
+          "R2": 0.9999978793976824
+        },
+        "target_humidity_percent": {
+          "MAE": 7.120768229166667e-05,
+          "RMSE": 8.721124369040042e-05,
+          "R2": 0.9999999995436519
+        },
+        "target_wind_speed_kmh": {
+          "MAE": 0.015136377016702932,
+          "RMSE": 0.01746217717431685,
+          "R2": 0.9999247092267488
+        }
+      },
+      "average_mae": 0.004120690956672991
+    }
+  }
+}

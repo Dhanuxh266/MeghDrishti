@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}MeghDrishti | Login{% endblock %}
+
+{% block content %}
+<main class="login-page">
+    <section class="brand-panel">
+        <div class="eyebrow">WEATHER MONITOR</div>
+        <h1>Megh<span>Drishti</span></h1>
+        <p class="tagline">Every Taluka Tells a Story</p>
+        <div class="divider"></div>
+        <p class="description">
+            AI-Powered Panchayat-Level Weather Intelligence & Early Warning System
+        </p>
+
+        <div class="feature-row">
+            <div class="feature-card">
+                <div class="feature-icon">◎</div>
+                <div>
+                    <strong>Hyperlocal</strong>
+                    <small>Forecasts</small>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">△</div>
+                <div>
+                    <strong>Early</strong>
+                    <small>Warnings</small>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">◌</div>
+                <div>
+                    <strong>Safer</strong>
+                    <small>Communities</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="system-note">
+            <span class="status-dot"></span>
+            <span>SYSTEM STATUS • OPERATIONAL</span>
+        </div>
+    </section>
+
+    <section class="login-panel">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="mini-label">SECURE ACCESS</span>
+                <h2>Welcome to MeghDrishti</h2>
+                <p>Sign in to access your weather intelligence dashboard.</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('login') }}" class="login-form">
+                <label for="identifier">Email / Mobile</label>
+                <input id="identifier" name="identifier" type="text"
+                       placeholder="Enter email or mobile" autocomplete="username" required>
+
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password"
+                       placeholder="Enter password" autocomplete="current-password" required>
+
+                <button type="submit" class="primary-button">
+                    <span>LOGIN</span>
+                    <span>→</span>
+                </button>
+            </form>
+
+            <div class="login-register-link">
+                <span>New to MeghDrishti?</span>
+                <a href="{{ url_for('register') }}">CREATE CITIZEN ACCOUNT</a>
+            </div>
+
+            <div class="login-footer">
+                <span class="lock">▣</span>
+                <span>Role-based access is enforced by the application.</span>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
