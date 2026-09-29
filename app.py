@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from models.prediction import PanchayatPrediction
 from models.alert import Alert, AlertRecipient, PanchayatResponse
 from services.ai_service import predict_panchayat_weather
@@ -42,20 +42,79 @@ def create_app():
     # CONFIGURATION
     # ========================================================
 
-    app.config["SECRET_KEY"] = os.getenv(
-        "SECRET_KEY",
-        "dev-only-change-me",
-    )
+    app_env = os.getenv("APP_ENV", "development").strip().lower()
+    secret_key = os.getenv("SECRET_KEY", "").strip()
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-        "DATABASE_URL",
-        "sqlite:///meghdrishti.db",
-    )
+    # Never silently run a production deployment with a placeholder secret.
+    if app_env == "production" and (
+        not secret_key or secret_key in {"dev-only-change-me", "change-me"}
+    ):
+        raise RuntimeError("SECRET_KEY must be set to a strong value when APP_ENV=production.")
+
+    app.config["SECRET_KEY"] = secret_key or "dev-only-change-me"
+
+    database_url = os.getenv("DATABASE_URL", "sqlite:///meghdrishti.db").strip()
+    # Render/Postgres providers may expose the legacy postgres:// scheme;
+    # SQLAlchemy 2 expects the explicit postgresql:// scheme.
+    if database_url.startswith("postgres://"):
+        database_url = "postgresql://" + database_url[len("postgres://"):]
+
+    if app_env == "production" and database_url.startswith("sqlite:"):
+        raise RuntimeError(
+            "A persistent PostgreSQL DATABASE_URL is required when APP_ENV=production."
+        )
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["MEGHDRISHTI_DATABASE_IS_PERSISTENT"] = not database_url.startswith("sqlite:")
 
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = app_env == "production"
+    app.config["SESSION_COOKIE_NAME"] = "meghdrishti_session"
+    app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=12)
+    app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
+
+    trusted_hosts = os.getenv("TRUSTED_HOSTS", "").strip()
+    if trusted_hosts:
+        app.config["TRUSTED_HOSTS"] = [
+            host.strip() for host in trusted_hosts.split(",") if host.strip()
+        ]
 
     # Initialize database
     db.init_app(app)
+
+    # ========================================================
+    # REQUEST SECURITY
+    # ========================================================
+
+    def get_csrf_token():
+        token = session.get("csrf_token")
+        if not token:
+            import secrets
+            token = secrets.token_urlsafe(32)
+            session["csrf_token"] = token
+        return token
+
+    @app.context_processor
+    def inject_security_helpers():
+        return {"csrf_token": get_csrf_token()}
+
+    @app.before_request
+    def enforce_csrf_for_state_changes():
+        if request.method in {"GET", "HEAD", "OPTIONS"}:
+            return None
+
+        token = session.get("csrf_token")
+        supplied = request.headers.get("X-CSRF-Token") or request.form.get("csrf_token")
+
+        if not token or not supplied or supplied != token:
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "CSRF validation failed"}), 403
+            abort(403, description="CSRF validation failed")
+
+        return None
 
     # ========================================================
     # MODELS
@@ -282,6 +341,7 @@ def create_app():
         # Create authenticated session
         session["user_id"] = user.id
         session["role"] = user.role
+        session.permanent = True
 
         return redirect(
             url_for("dashboard")
@@ -605,7 +665,7 @@ def create_app():
 
         user = get_current_user()
 
-        if not user:
+        if not user or not user.is_active:
 
             session.clear()
 
@@ -2165,7 +2225,7 @@ def create_app():
     # LOGOUT
     # ========================================================
 
-    @app.get("/logout")
+    @app.post("/logout")
     def logout():
 
         session.clear()
@@ -2192,6 +2252,46 @@ def create_app():
             "timestamp":
                 datetime.utcnow().isoformat() + "Z",
         })
+
+    # ========================================================
+    # READINESS CHECK
+    # ========================================================
+
+    @app.get("/api/readiness")
+    def readiness():
+        """Deployment readiness probe.
+
+        Returns 200 only when the application can reach its database and
+        production configuration is safe. This endpoint intentionally does
+        not expose secrets or database credentials.
+        """
+        checks = {
+            "database": False,
+            "secret_key": False,
+            "persistent_database": False,
+        }
+
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            checks["database"] = True
+        except Exception:
+            db.session.rollback()
+
+        checks["secret_key"] = bool(
+            app.config.get("SECRET_KEY")
+            and app.config["SECRET_KEY"] != "dev-only-change-me"
+        ) or app_env != "production"
+        checks["persistent_database"] = bool(
+            app.config.get("MEGHDRISHTI_DATABASE_IS_PERSISTENT")
+        ) or app_env != "production"
+
+        ready = all(checks.values())
+        return jsonify({
+            "status": "ready" if ready else "not_ready",
+            "project": "MeghDrishti",
+            "environment": app_env,
+            "checks": checks,
+        }), 200 if ready else 503
 
     # ========================================================
     # SYSTEM STATUS

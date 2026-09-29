@@ -3094,3 +3094,8 @@ body {
 .login-register-link a:hover {
     text-decoration: underline;
 }
+
+/* Day 8C security-aware logout control */
+.logout-form { margin: 0; display: inline-flex; }
+.logout-form button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.logout-form button:focus-visible { outline: 2px solid rgba(236, 220, 188, .85); outline-offset: 3px; border-radius: 8px; }

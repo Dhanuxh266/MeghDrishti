@@ -35,6 +35,7 @@
                     {% endwith %}
 
                     <form method="POST" action="{{ url_for('register') }}" class="register-form" id="registerForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <label for="regName">Full name *</label>
                         <input id="regName" name="name" type="text" maxlength="120" autocomplete="name" required>
 

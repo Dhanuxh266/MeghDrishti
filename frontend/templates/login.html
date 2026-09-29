@@ -59,6 +59,7 @@
             {% endwith %}
 
             <form method="POST" action="{{ url_for('login') }}" class="login-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <label for="identifier">Email / Mobile</label>
                 <input id="identifier" name="identifier" type="text"
                        placeholder="Enter email or mobile" autocomplete="username" required>

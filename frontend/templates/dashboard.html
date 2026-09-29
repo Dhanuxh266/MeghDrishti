@@ -50,9 +50,9 @@
                 <span id="connectionStatus">Connecting</span>
             </span>
 
-            <a href="{{ url_for('logout') }}" class="md-logout">
+            <form method="POST" action="{{ url_for('logout') }}" class="logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit"  class="md-logout">
                 Logout
-            </a>
+            </button></form>
 
             <button class="md-menu-button" id="mdMenuButton" aria-label="Open navigation">
                 <span></span><span></span><span></span>

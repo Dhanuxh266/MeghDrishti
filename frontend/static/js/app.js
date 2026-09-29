@@ -181,24 +181,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // API REQUEST HELPER
     // =========================================================
 
+    function csrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    }
+
+    async function secureFetch(url, options = {}) {
+        const headers = new Headers(options.headers || {});
+        headers.set("Accept", "application/json");
+        if (!["GET", "HEAD", "OPTIONS"].includes((options.method || "GET").toUpperCase())) {
+            headers.set("X-CSRF-Token", csrfToken());
+        }
+        return fetch(url, {
+            credentials: "same-origin",
+            ...options,
+            headers
+        });
+    }
+
     async function api(url) {
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method:
-                        "GET",
-
-                    credentials:
-                        "same-origin",
-
-                    headers: {
-                        "Accept":
-                            "application/json"
-                    }
-                }
-            );
+        const response = await secureFetch(url, { method: "GET" });
 
 
         let data = {};
@@ -1510,14 +1512,11 @@ document.addEventListener("DOMContentLoaded", () => {
             // -----------------------------------------------------
 
             const response =
-                await fetch(
+                await secureFetch(
                     `/api/ai/panchayat/${panchayatId}/predict`,
                     {
                         method:
                             "POST",
-
-                        credentials:
-                            "same-origin",
 
                         headers: {
 
@@ -3057,7 +3056,7 @@ if (menuButton) {
         if (button) { button.disabled = true; button.textContent = "Generating…"; }
         alertFeedback("");
         try {
-            const response = await fetch(`/api/alerts/generate/${state.panchayat.id}`, {
+            const response = await secureFetch(`/api/alerts/generate/${state.panchayat.id}`, {
                 method: "POST",
                 credentials: "same-origin",
                 headers: { "Accept": "application/json", "Content-Type": "application/json" },
@@ -3082,7 +3081,7 @@ if (menuButton) {
         }
         alertFeedback("");
         try {
-            const response = await fetch(`/api/alerts/${alertId}/send-sms`, {
+            const response = await secureFetch(`/api/alerts/${alertId}/send-sms`, {
                 method: "POST",
                 credentials: "same-origin",
                 headers: { "Accept": "application/json", "Content-Type": "application/json" },
@@ -3107,7 +3106,7 @@ if (menuButton) {
     async function updateAlertStatus(alertId, action) {
         const note = window.prompt(action === "resolve" ? "Optional resolution note:" : "Optional acknowledgement note:", "") ?? "";
         try {
-            const response = await fetch(`/api/alerts/${alertId}/${action}`, {
+            const response = await secureFetch(`/api/alerts/${alertId}/${action}`, {
                 method: "POST",
                 credentials: "same-origin",
                 headers: { "Accept": "application/json", "Content-Type": "application/json" },

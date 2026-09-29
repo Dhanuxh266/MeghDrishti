@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: meghdrishti
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: "0"
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SMS_PROVIDER
+        value: disabled
+      - key: SMS_DRY_RUN
+        value: "1"

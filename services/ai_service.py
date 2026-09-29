@@ -27,7 +27,7 @@ MODEL_DIR = os.path.join(
 
 SELECTED_MODEL_PATH = os.path.join(
     MODEL_DIR,
-    "selected_model.joblib"
+    "random_forest.joblib"
 )
 
 METRICS_PATH = os.path.join(
@@ -62,7 +62,7 @@ def load_model():
 
     if not os.path.exists(SELECTED_MODEL_PATH):
         raise FileNotFoundError(
-            "Selected AI model not found: "
+            "Selected Random Forest AI model not found: "
             f"{SELECTED_MODEL_PATH}"
         )
 
