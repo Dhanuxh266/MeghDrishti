@@ -281,18 +281,23 @@ PostgreSQL persistence through the `DATABASE_URL` environment variable.
 ------------------------------------------------------------------------
 ## Demo Login Credentials
 
-The following seeded accounts are available for testing the MeghDrishti MVP:
+The following seeded accounts are available for testing the MeghDrishti MVP.
 
-Role	Name	Email	Mobile	Password
-Government Official	Government Official	gov@meghdrishti.local	9000000001	Gov@12345
-Panchayat Official	Panchayat Official	panchayat@meghdrishti.local	9000000002	Panchayat@123
-Citizen	Citizen User	citizen@meghdrishti.local	9000000003	Citizen@123
-Role Access
-Government Official — Central monitoring and administrative dashboard
-Panchayat Official — Assigned Panchayat weather, risk, alerts and response
-Citizen — Local weather, warnings, risk information and safety guidance
+| Role | Name | Email | Mobile | Password |
+|---|---|---|---|---|
+| Government Official | Government Official | `gov@meghdrishti.local` | `9000000001` | `Gov@12345` |
+| Panchayat Official | Panchayat Official | `panchayat@meghdrishti.local` | `9000000002` | `Panchayat@123` |
+| Citizen | Citizen User | `citizen@meghdrishti.local` | `9000000003` | `Citizen@123` |
 
-Note: These are demo credentials for the MVP environment. They should not be used as production credentials.
+### Role Access
+
+| Role | Access |
+|---|---|
+| **Government Official** | Central monitoring and administrative dashboard |
+| **Panchayat Official** | Assigned Panchayat weather, risk, alerts and response |
+| **Citizen** | Local weather, warnings, risk information and safety guidance |
+
+> **Note:** These are demo credentials for the MVP environment. They should not be used as production credentials.
 
 ------------------------------------------------------------------------
 ## Demo Scope
