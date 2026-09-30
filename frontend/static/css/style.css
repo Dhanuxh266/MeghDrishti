@@ -77,7 +77,7 @@ body {
             rgba(22, 15, 13, 0.06) 45%,
             rgba(17, 21, 35, 0.12) 100%
         ),
-        url("../assets/meghdrishti-weather-hero.PNG");
+        url("/static/assets/meghdrishti-weather-hero.PNG");
 
     background-position: center center;
     background-size: cover;
